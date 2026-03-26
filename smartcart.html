@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SmartCart</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf8f4;--bg2:#f2ede4;--surface:#fff;--border:#e4ddd2;--border2:#d4ccc0;
+  --text:#1a1714;--text-sub:#6b6259;--text-muted:#a89f94;
+  --accent:#2d6a4f;--accent-light:#d8f3dc;--accent-mid:#52b788;
+  --warn:#e76f51;--warn-light:#fde8e1;--gold:#b5860d;
+  --recipe:#7b4f9e;--recipe-light:#f0e8f8;--recipe-mid:#a87cc8;
+  --radius:14px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;max-width:540px;margin:0 auto;padding-bottom:80px;font-size:15px}
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:540px;background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);z-index:100;box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0 11px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;transition:color .15s}
+.tab-btn .icon{font-size:19px;line-height:1}
+.tab-btn.active{color:var(--accent)}
+.page{display:none;padding:0 0 12px}
+.page.active{display:block}
+.page-header{padding:20px 18px 14px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;display:flex;align-items:flex-start;justify-content:space-between}
+.page-title{font-family:'Fraunces',serif;font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.page-subtitle{font-size:13px;color:var(--text-sub);margin-top:3px}
+input[type=text],input[type=number],textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color .15s;resize:vertical}
+input:focus,textarea:focus{border-color:var(--accent-mid)}
+textarea{min-height:80px;line-height:1.5}
+.btn{font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;padding:10px 18px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#235c41}
+.btn-primary:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text-sub)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+.btn-danger{background:var(--warn-light);color:var(--warn);border:none}
+.btn-recipe{background:var(--recipe);color:#fff}
+.btn-recipe:hover{background:#6a3d8a}
+.btn-sm{font-size:12px;padding:6px 12px}
+.input-row{display:flex;gap:8px}
+.input-group{display:flex;flex-direction:column;gap:6px}
+.input-label{font-size:12px;font-weight:500;color:var(--text-sub)}
+.section-card{margin:0 16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.section-card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.section-card-title{font-weight:600;font-size:14px}
+.empty-list{text-align:center;padding:36px 20px;color:var(--text-muted);font-size:14px}
+.empty-list .empty-icon{font-size:36px;margin-bottom:8px}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:540px;animation:slideUpModal .25s ease;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+/* CONFIRM MODAL */
+.confirm-msg{font-size:15px;color:var(--text-sub);line-height:1.5;margin-bottom:4px}
+@keyframes slideUpModal{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-bar{margin:0 16px 12px;padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;display:none;align-items:center;gap:8px}
+.status-bar.thinking{display:flex;background:var(--accent-light);border:1px solid var(--accent-mid);color:var(--accent)}
+.status-bar.error{display:flex;background:var(--warn-light);border:1px solid var(--warn);color:var(--warn)}
+.spinner{width:14px;height:14px;border:2px solid rgba(45,106,79,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+/* SHOPPING */
+.stores-scroll{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none;border-bottom:1px solid var(--border);background:var(--surface);align-items:center}
+.stores-scroll::-webkit-scrollbar{display:none}
+.store-tab{flex-shrink:0;padding:7px 16px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.store-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.add-store-tab{flex-shrink:0;padding:7px 14px;border-radius:99px;border:1px dashed var(--border2);background:none;font-size:13px;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.del-store-tab{flex-shrink:0;padding:7px 12px;border-radius:99px;border:1px solid #fca5a5;background:#fee2e2;font-size:12px;color:var(--warn);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;display:none}
+.del-store-tab.visible{display:block}
+.store-actions-bar{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.list-toolbar{padding:10px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:61px;z-index:40}
+.search-input-wrap{flex:1;position:relative}
+.search-input-wrap input{padding-left:32px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
+.items-list{padding:8px 16px;display:flex;flex-direction:column;gap:6px}
+.item-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);animation:fadeSlide .15s ease;transition:opacity .2s}
+.item-row.purchased{opacity:.45}
+.item-checkbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--border2);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;font-weight:700;color:#fff}
+.item-row.purchased .item-checkbox{background:var(--accent);border-color:var(--accent)}
+.item-name{flex:1;font-size:14px}
+.item-row.purchased .item-name{text-decoration:line-through;color:var(--text-muted)}
+.item-qty{font-size:13px;color:var(--text-sub);background:var(--bg2);padding:2px 8px;border-radius:99px}
+.item-del{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:2px 4px;border-radius:4px}
+.item-del:hover{color:var(--warn)}
+.add-item-area{margin:0 16px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.add-item-trigger{padding:12px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text-sub);font-size:14px;border:none;background:none;width:100%;font-family:'DM Sans',sans-serif}
+.add-item-trigger:hover{background:var(--bg)}
+.add-item-form{padding:12px 16px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:8px}
+.add-item-form.open{display:flex}
+.suggestions-list{max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}
+.suggestion-item{padding:9px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);transition:background .1s}
+.suggestion-item:last-child{border-bottom:none}
+.suggestion-item:hover{background:var(--bg2)}
+/* FILE DROP ZONES */
+.drop-zone{position:relative;margin:16px;border:2px dashed var(--border2);border-radius:var(--radius);background:var(--surface);transition:border-color .2s;min-height:160px;display:flex;align-items:center;justify-content:center}
+.drop-zone.dragover{border-color:var(--accent-mid)}
+.drop-zone-recipe.dragover{border-color:var(--recipe-mid)}
+/* File input covers the full zone - NO overflow:hidden on parent, NO display:none, NO font-size:0 */
+.drop-zone-input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;margin:0;padding:0}
+.drop-preview{width:100%;max-height:260px;object-fit:cover;display:none;border-radius:calc(var(--radius) - 2px)}
+.drop-preview-sm{max-height:200px}
+.drop-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 20px;pointer-events:none}
+.drop-placeholder .big-icon{font-size:36px}
+.drop-placeholder .dp-label{font-weight:600;color:var(--text-sub)}
+.drop-placeholder .dp-hint{font-size:12px;color:var(--text-muted)}
+.scan-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px 12px}
+.result-banner{margin:0 16px 12px;background:var(--accent-light);border:1px solid var(--accent-mid);border-radius:var(--radius);padding:16px;display:none}
+.result-banner.visible{display:block;animation:fadeSlide .25s ease}
+.result-detected{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.result-total{font-family:'Fraunces',serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;margin:4px 0}
+.result-note-text{font-size:13px;color:var(--text-sub)}
+.result-actions{display:flex;gap:8px;margin-top:12px}
+.store-select-label{font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:6px}
+.store-pills{display:flex;flex-wrap:wrap;gap:6px}
+.store-pill{padding:6px 12px;border-radius:99px;border:1px solid var(--border2);background:var(--surface);font-size:13px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.store-pill.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.receipt-log{display:flex;flex-direction:column}
+.receipt-entry{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.receipt-entry:last-child{border-bottom:none}
+.receipt-thumb{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
+.receipt-thumb-ph{width:40px;height:40px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.receipt-info{flex:1;min-width:0}
+.receipt-store{font-weight:500;font-size:14px}
+.receipt-date{font-size:12px;color:var(--text-muted);margin-top:1px}
+.receipt-amount{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:var(--warn)}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px;border-radius:6px;transition:color .15s}
+.del-btn:hover{color:var(--warn)}
+/* BUDGET */
+.budget-hero{margin:16px;background:var(--accent);border-radius:20px;padding:24px;color:#fff;position:relative;overflow:hidden}
+.budget-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(255,255,255,.12) 0%,transparent 60%)}
+.budget-month{font-size:12px;font-weight:500;opacity:.75;letter-spacing:1px;text-transform:uppercase}
+.budget-remaining{font-family:'Fraunces',serif;font-size:48px;font-weight:700;line-height:1.05;margin:6px 0 2px;letter-spacing:-1px}
+.budget-sub{font-size:13px;opacity:.75}
+.budget-bar-wrap{margin-top:16px}
+.budget-bar-bg{height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.budget-bar-fill{height:100%;border-radius:99px;background:#fff;transition:width .5s ease}
+.budget-bar-labels{display:flex;justify-content:space-between;font-size:11px;opacity:.7;margin-top:6px}
+.budget-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px 16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:11px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase}
+.stat-value{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-top:4px;letter-spacing:-.5px}
+.stat-value.warn{color:var(--warn)}
+.stat-value.gold{color:var(--gold)}
+.budget-form{padding:16px;display:flex;flex-direction:column;gap:12px}
+/* RECIPES */
+.recipe-status-bar{margin:0 16px 12px;padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;display:none;align-items:center;gap:8px}
+.recipe-status-bar.thinking{display:flex;background:var(--recipe-light);border:1px solid var(--recipe-mid);color:var(--recipe)}
+.recipe-status-bar.error{display:flex;background:var(--warn-light);border:1px solid var(--warn);color:var(--warn)}
+.recipe-spinner{width:14px;height:14px;border:2px solid rgba(123,79,158,.2);border-top-color:var(--recipe);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.recipe-grid{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.paste-section{margin:0 16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.paste-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none}
+.paste-header:hover{background:var(--bg)}
+.paste-title{font-weight:600;font-size:14px}
+.paste-hint{font-size:12px;color:var(--text-muted);margin-top:2px}
+.paste-body{padding:0 16px 14px;display:none;flex-direction:column;gap:0}
+.paste-body.open{display:flex}
+.recipe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s;animation:fadeSlide .2s ease}
+.recipe-card:hover{border-color:var(--recipe-mid)}
+.recipe-card-img{width:100%;height:130px;object-fit:cover;display:block}
+.recipe-card-img-ph{width:100%;height:80px;background:var(--recipe-light);display:flex;align-items:center;justify-content:center;font-size:28px}
+.recipe-card-body{padding:12px 14px}
+.recipe-card-name{font-family:'Fraunces',serif;font-size:17px;font-weight:700;line-height:1.2}
+.recipe-card-meta{font-size:12px;color:var(--text-muted);margin-top:4px}
+.recipe-detail{display:none}
+.recipe-detail.open{display:block}
+.recipe-detail-hdr{padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px}
+.back-btn{background:none;border:none;cursor:pointer;font-size:22px;padding:2px 6px;color:var(--text-sub);line-height:1}
+.recipe-detail-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recipe-detail-img{width:100%;max-height:220px;object-fit:cover;display:block}
+.recipe-detail-img-ph{width:100%;height:100px;background:var(--recipe-light);display:flex;align-items:center;justify-content:center;font-size:40px}
+.recipe-detail-body{padding:16px;display:flex;flex-direction:column;gap:20px}
+.recipe-sec-title{font-family:'Fraunces',serif;font-size:15px;font-weight:700;color:var(--recipe);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.ing-edit-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ing-edit-row input{flex:1}
+.step-edit-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.step-num{font-weight:700;color:var(--recipe);font-size:14px;min-width:22px;padding-top:10px}
+.step-edit-row textarea{flex:1;min-height:60px}
+.add-line-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg2);border:1px dashed var(--border2);border-radius:var(--radius-sm);font-size:13px;color:var(--text-sub);cursor:pointer;width:100%;font-family:'DM Sans',sans-serif;transition:background .15s}
+.add-line-btn:hover{background:var(--border)}
+.recipe-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);position:sticky;bottom:72px;z-index:40}
+.ing-picker{display:flex;flex-direction:column;gap:4px;max-height:45vh;overflow-y:auto}
+.picker-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.picker-row:last-child{border-bottom:none}
+.picker-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border2);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;transition:all .15s}
+.picker-check.on{background:var(--recipe);border-color:var(--recipe)}
+.picker-name{flex:1;font-size:14px}
+.store-pick-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.store-pick-pill{padding:5px 12px;border-radius:99px;border:1px solid var(--border2);background:var(--surface);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.store-pick-pill.on{background:var(--recipe);color:#fff;border-color:var(--recipe)}
+/* CALORIE CARD */
+.cal-card{background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #f59e0b;border-radius:var(--radius);padding:16px}
+.cal-title{font-family:'Fraunces',serif;font-size:15px;font-weight:700;color:#b45309;margin-bottom:12px}
+.cal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.cal-stat{background:rgba(255,255,255,.7);border-radius:var(--radius-sm);padding:10px 12px;text-align:center}
+.cal-stat-val{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#92400e}
+.cal-stat-label{font-size:11px;color:#b45309;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.cal-breakdown{font-size:12px;color:#78350f;line-height:1.7;background:rgba(255,255,255,.5);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+.cal-note{font-size:11px;color:#a16207;font-style:italic;margin-bottom:8px}
+.cal-btn{background:#f59e0b;color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 16px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s}
+.cal-btn:hover{background:#d97706}
+.cal-btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed}
+.cal-spinner{width:13px;height:13px;border:2px solid rgba(180,83,9,.2);border-top-color:#b45309;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+.servings-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.servings-row input{width:70px;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- SHOPPING -->
+<div class="page active" id="page-shop">
+  <div class="page-header">
+    <div><div class="page-title">Shopping Lists</div><div class="page-subtitle">Tap items to mark as purchased</div></div>
+  </div>
+  <div class="stores-scroll" id="stores-scroll">
+    <button class="add-store-tab" onclick="openAddStoreModal()">＋ Add Store</button>
+    <button class="del-store-tab" id="del-store-tab" onclick="confirmDeleteStore()">✕ Remove</button>
+  </div>
+  <div class="store-actions-bar" id="store-actions-bar">
+    <button class="btn btn-ghost btn-sm" onclick="clearPurchased()">✓ Clear Purchased</button>
+  </div>
+  <div class="list-toolbar">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="item-search" placeholder="Search or add items…" oninput="handleItemSearch()" autocomplete="off">
+    </div>
+  </div>
+  <div id="suggestions-container"></div>
+  <div class="add-item-area" id="add-item-area">
+    <button class="add-item-trigger" onclick="toggleAddForm()"><span style="font-size:18px">＋</span> Add item to list</button>
+    <div class="add-item-form" id="add-item-form">
+      <div class="input-row">
+        <input type="text" id="new-item-name" placeholder="Item name" style="flex:1">
+        <input type="number" id="new-item-qty" placeholder="Qty" style="width:64px" min="1" value="1">
+      </div>
+      <div class="input-row">
+        <button class="btn btn-primary btn-sm" onclick="addItemToList()">Add to List</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAddForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="items-list" id="items-list"></div>
+</div>
+
+<!-- SCANNER -->
+<div class="page" id="page-scan">
+  <div class="page-header"><div><div class="page-title">Scan Receipt</div><div class="page-subtitle">Extract total &amp; log to budget</div></div></div>
+
+  <!-- Drop zone: transparent file input overlaid on the zone -->
+  <div class="drop-zone" id="scanner-drop"
+    ondragover="event.preventDefault();this.classList.add('dragover')"
+    ondragleave="this.classList.remove('dragover')"
+    ondrop="handleScanDrop(event)">
+    <img id="scan-preview" class="drop-preview" alt="">
+    <div class="drop-placeholder" id="scan-placeholder">
+      <div class="big-icon">🧾</div>
+      <div class="dp-label">Tap to add receipt</div>
+      <div class="dp-hint">Camera · Photos · Screenshot · Drag &amp; Drop</div>
+    </div>
+    <input type="file" accept="image/*" class="drop-zone-input" id="scan-file" onchange="handleScanFile(event)">
+  </div>
+
+  <div class="scan-actions">
+    <label for="scan-file" class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📷 Choose Image</label>
+    <button class="btn btn-primary" id="extract-btn" disabled onclick="extractTotal()">✦ Extract Total</button>
+  </div>
+  <div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Analyzing…</span></div>
+  <div class="result-banner" id="result-banner">
+    <div class="result-detected">Detected Total</div>
+    <div class="result-total" id="result-total-val">—</div>
+    <div class="result-note-text" id="result-note-val"></div>
+    <div style="margin:12px 0 0"><div class="store-select-label">Log to store (optional):</div><div class="store-pills" id="store-pills"></div></div>
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="saveToLog()" style="flex:1">＋ Save to Budget</button>
+      <button class="btn btn-ghost" onclick="discardScan()">Discard</button>
+    </div>
+  </div>
+  <div class="section-card" style="margin:0 16px">
+    <div class="section-card-header"><span class="section-card-title">Receipt Log</span><button class="btn btn-ghost btn-sm" onclick="confirmClearReceipts()">Clear All</button></div>
+    <div class="receipt-log" id="receipt-log"></div>
+  </div>
+</div>
+
+<!-- RECIPES -->
+<div class="page" id="page-recipe">
+  <div id="recipe-list-view">
+    <div class="page-header">
+      <div><div class="page-title">Recipes</div><div class="page-subtitle">Scan or add your recipes</div></div>
+      <button class="btn btn-recipe btn-sm" style="margin-top:4px;flex-shrink:0" onclick="openNewRecipeManual()">＋ Manual</button>
+    </div>
+
+    <!-- Drop zone with transparent overlay input -->
+    <div class="drop-zone drop-zone-recipe" id="recipe-scan-zone"
+      ondragover="event.preventDefault();this.classList.add('dragover')"
+      ondragleave="this.classList.remove('dragover')"
+      ondrop="handleRecipeDrop(event)">
+      <img id="recipe-preview" class="drop-preview drop-preview-sm" alt="">
+      <div class="drop-placeholder" id="recipe-scan-placeholder">
+        <div class="big-icon">📖</div>
+        <div class="dp-label">Tap to add recipe image</div>
+        <div class="dp-hint">Camera · Photos · Screenshot · Drag &amp; Drop</div>
+      </div>
+      <input type="file" accept="image/*" class="drop-zone-input" id="recipe-file" onchange="handleRecipeFile(event)">
+    </div>
+
+    <div class="scan-actions">
+      <label for="recipe-file" class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📷 Choose Image</label>
+      <button class="btn btn-recipe" id="scan-recipe-btn" disabled onclick="scanRecipe()">✦ Extract Recipe</button>
+    </div>
+    <div class="recipe-status-bar" id="recipe-status-bar"><div class="recipe-spinner"></div><span id="recipe-status-text">Reading recipe…</span></div>
+
+    <!-- TEXT PASTE SECTION -->
+    <div class="paste-section">
+      <div class="paste-header" onclick="togglePasteBox()">
+        <span style="font-size:22px">📋</span>
+        <div style="flex:1">
+          <div class="paste-title">Paste Recipe Text</div>
+          <div class="paste-hint">Copy from a website, app, or notes</div>
+        </div>
+        <span id="paste-chevron" style="color:var(--text-muted);font-size:13px;transition:transform .2s">▼</span>
+      </div>
+      <div class="paste-body" id="paste-body">
+        <textarea id="recipe-text-input" placeholder="Paste your recipe here — ingredients, steps, anything. AI will extract and organize it automatically." style="min-height:140px;margin-bottom:10px"></textarea>
+        <button class="btn btn-recipe" style="width:100%" id="extract-text-btn" onclick="extractRecipeFromText()">✦ Extract Recipe from Text</button>
+      </div>
+    </div>
+
+    <div class="recipe-grid" id="recipe-grid"></div>
+  </div>
+
+  <div id="recipe-detail-view" class="recipe-detail">
+    <div class="recipe-detail-hdr">
+      <button class="back-btn" onclick="closeRecipeDetail()">←</button>
+      <div class="recipe-detail-title" id="detail-title-display">Recipe</div>
+      <button class="btn btn-ghost btn-sm" id="detail-edit-toggle" onclick="toggleRecipeEdit()">Edit</button>
+    </div>
+    <div id="detail-img-wrap"></div>
+    <div class="recipe-actions-bar">
+      <button class="btn btn-recipe btn-sm" onclick="openIngredientPicker()">🛒 Add to List</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDeleteRecipe()">✕ Delete</button>
+    </div>
+    <div class="recipe-detail-body" id="recipe-detail-body"></div>
+  </div>
+</div>
+
+<!-- BUDGET -->
+<div class="page" id="page-budget">
+  <div class="page-header"><div><div class="page-title">Monthly Budget</div><div class="page-subtitle">Resets on the 1st of each month</div></div></div>
+  <div class="budget-hero">
+    <div class="budget-month" id="budget-month-label">—</div>
+    <div class="budget-remaining" id="budget-remaining">$—</div>
+    <div class="budget-sub" id="budget-sub-label">remaining this month</div>
+    <div class="budget-bar-wrap"><div class="budget-bar-bg"><div class="budget-bar-fill" id="budget-bar" style="width:0%"></div></div><div class="budget-bar-labels"><span>$0</span><span id="budget-bar-max">—</span></div></div>
+  </div>
+  <div class="budget-stats">
+    <div class="stat-card"><div class="stat-label">Spent</div><div class="stat-value warn" id="stat-spent">$0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Budget</div><div class="stat-value gold" id="stat-budget">—</div></div>
+  </div>
+  <div class="section-card" style="margin:0 16px 12px">
+    <div class="section-card-header"><span class="section-card-title">Budget Settings</span></div>
+    <div class="budget-form">
+      <div class="input-group"><div class="input-label">Monthly Budget ($)</div><div class="input-row"><input type="number" id="budget-input" placeholder="e.g. 600" min="1" step="0.01"><button class="btn btn-primary" onclick="saveBudget()">Save</button></div></div>
+      <div style="font-size:12px;color:var(--text-muted)">Resets automatically on the 1st of each month.</div>
+    </div>
+  </div>
+  <div class="section-card" style="margin:0 16px 12px">
+    <div class="section-card-header"><span class="section-card-title">This Month's Receipts</span></div>
+    <div class="receipt-log" id="budget-receipt-log"></div>
+  </div>
+</div>
+
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header"><div><div class="page-title">Settings</div><div class="page-subtitle">API key &amp; preferences</div></div></div>
+
+  <div class="section-card" style="margin:16px 16px 12px">
+    <div class="section-card-header"><span class="section-card-title">🔑 Anthropic API Key</span></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:13px;color:var(--text-sub);line-height:1.6">
+        Required for AI features: receipt scanning, recipe extraction, and calorie estimates.<br><br>
+        Get your free key at <strong>console.anthropic.com</strong> → API Keys → Create Key.
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1;font-family:monospace;font-size:13px">
+          <button class="btn btn-ghost btn-sm" onclick="toggleKeyVisibility()" id="key-vis-btn" style="flex-shrink:0;white-space:nowrap">Show</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="saveApiKey()" style="flex:1">Save Key</button>
+        <button class="btn btn-danger btn-sm" onclick="clearApiKey()">Clear</button>
+      </div>
+      <div id="key-status" style="font-size:13px;display:none"></div>
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--text-sub);line-height:1.6">
+        🔒 Your key is stored only on this device in local storage. It is never sent anywhere except directly to Anthropic's API.
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card" style="margin:0 16px 12px">
+    <div class="section-card-header"><span class="section-card-title">How to get an API key</span></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text-sub);line-height:1.7">
+      <div><strong style="color:var(--text)">1.</strong> Go to <strong style="color:var(--accent)">console.anthropic.com</strong></div>
+      <div><strong style="color:var(--text)">2.</strong> Sign up or log in (free account works)</div>
+      <div><strong style="color:var(--text)">3.</strong> Click <strong style="color:var(--text)">API Keys</strong> in the left sidebar</div>
+      <div><strong style="color:var(--text)">4.</strong> Click <strong style="color:var(--text)">Create Key</strong> — copy it immediately</div>
+      <div><strong style="color:var(--text)">5.</strong> Paste it in the field above and tap Save Key</div>
+      <div style="margin-top:4px;padding:10px;background:var(--gold-light,#fef3cd);border-radius:var(--radius-sm);color:#7c5e0a">
+        ⚠️ New accounts get free credits to start. After that, usage is pay-as-you-go — scanning a receipt or recipe costs a fraction of a cent.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="showPage('shop',this)"><span class="icon">🛒</span>Shopping</button>
+  <button class="tab-btn" onclick="showPage('scan',this)"><span class="icon">📷</span>Scanner</button>
+  <button class="tab-btn" onclick="showPage('recipe',this)"><span class="icon">📖</span>Recipes</button>
+  <button class="tab-btn" onclick="showPage('budget',this)"><span class="icon">💰</span>Budget</button>
+  <button class="tab-btn" onclick="showPage('settings',this)"><span class="icon">⚙️</span>Settings</button>
+</nav>
+
+<!-- MODAL: Add Store -->
+<div class="modal-overlay" id="modal-store" onclick="if(event.target===this)closeModal('modal-store')">
+  <div class="modal">
+    <div class="modal-title">Add New Store</div>
+    <input type="text" id="new-store-name" placeholder="e.g. Kroger, Aldi…">
+    <div class="modal-actions"><button class="btn btn-primary" onclick="addStore()" style="flex:1">Add Store</button><button class="btn btn-ghost" onclick="closeModal('modal-store')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Ingredient picker -->
+<div class="modal-overlay" id="modal-pick-ing" onclick="if(event.target===this)closeModal('modal-pick-ing')">
+  <div class="modal">
+    <div class="modal-title">Add to Shopping List</div>
+    <div style="font-size:13px;color:var(--text-sub);margin-bottom:12px">Pick a store, then choose ingredients.</div>
+    <div class="input-label" style="margin-bottom:6px">Store:</div>
+    <div class="store-pick-row" id="picker-store-row"></div>
+    <div class="input-label" style="margin-bottom:6px">Ingredients:</div>
+    <div class="ing-picker" id="ingredient-picker"></div>
+    <div class="modal-actions"><button class="btn btn-recipe" onclick="confirmAddIngredients()" style="flex:1">＋ Add Selected</button><button class="btn btn-ghost" onclick="closeModal('modal-pick-ing')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Generic confirm (replaces confirm() which is blocked in iframes) -->
+<div class="modal-overlay" id="modal-confirm" onclick="if(event.target===this)cancelConfirm()">
+  <div class="modal">
+    <div class="modal-title" id="confirm-title">Are you sure?</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="confirm-ok-btn" onclick="doConfirm()" style="flex:1">Delete</button>
+      <button class="btn btn-ghost" onclick="cancelConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CUSTOM CONFIRM (replaces blocked confirm() in iframes) ───
+let _confirmCallback = null;
+function showConfirm(title, msg, okLabel, cb) {
+  _confirmCallback = cb;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-ok-btn').textContent = okLabel || 'Delete';
+  openModal('modal-confirm');
+}
+function doConfirm() {
+  closeModal('modal-confirm');
+  if (_confirmCallback) { _confirmCallback(); _confirmCallback = null; }
+}
+function cancelConfirm() {
+  closeModal('modal-confirm');
+  _confirmCallback = null;
+}
+
+// ─── DEFAULT DATA ───
+const DEFAULT_ITEMS = ["Apples","Bananas","Oranges","Strawberries","Blueberries","Grapes","Lemons","Limes","Avocados","Tomatoes","Spinach","Kale","Lettuce","Broccoli","Carrots","Celery","Cucumbers","Peppers","Onions","Garlic","Potatoes","Sweet Potatoes","Zucchini","Mushrooms","Corn","Green Beans","Peas","Asparagus","Chicken Breast","Ground Beef","Salmon","Tilapia","Shrimp","Pork Chops","Turkey","Bacon","Eggs","Tofu","Milk","Butter","Cheese","Yogurt","Cream Cheese","Sour Cream","Heavy Cream","Oat Milk","Almond Milk","Bread","Bagels","English Muffins","Tortillas","Pita Bread","Croissants","Rice","Pasta","Quinoa","Oats","Cereal","Granola","Flour","Sugar","Brown Sugar","Olive Oil","Vegetable Oil","Soy Sauce","Hot Sauce","Ketchup","Mustard","Mayonnaise","Salsa","Pasta Sauce","Chicken Broth","Canned Tomatoes","Black Beans","Chickpeas","Lentils","Peanut Butter","Jelly","Honey","Coffee","Tea","Orange Juice","Apple Juice","Sparkling Water","Soda","Wine","Beer","Paper Towels","Toilet Paper","Dish Soap","Laundry Detergent","Sponges","Trash Bags","Aluminum Foil","Plastic Wrap","Shampoo","Conditioner","Body Wash","Toothpaste","Deodorant","Razors","Hand Soap","Lotion","Chocolate","Chips","Crackers","Cookies","Ice Cream","Popcorn","Nuts","Dried Fruit","Protein Bars"];
+
+
+// ─── API KEY ───
+function getApiKey(){return localStorage.getItem('smartcart-apikey')||'';}
+function saveApiKey(){
+  const v=document.getElementById('api-key-input').value.trim();
+  if(!v){showKeyStatus('Please enter a key.','var(--warn)');return;}
+  if(!v.startsWith('sk-')){showKeyStatus('That doesn\'t look like a valid key — it should start with sk-','var(--warn)');return;}
+  localStorage.setItem('smartcart-apikey',v);
+  showKeyStatus('✓ Key saved! AI features are now active.','var(--accent)');
+}
+function clearApiKey(){
+  localStorage.removeItem('smartcart-apikey');
+  document.getElementById('api-key-input').value='';
+  showKeyStatus('Key cleared.','var(--text-muted)');
+}
+function showKeyStatus(msg,color){
+  const el=document.getElementById('key-status');
+  el.textContent=msg;el.style.color=color;el.style.display='block';
+  setTimeout(()=>el.style.display='none',4000);
+}
+function toggleKeyVisibility(){
+  const inp=document.getElementById('api-key-input');
+  const btn=document.getElementById('key-vis-btn');
+  if(inp.type==='password'){inp.type='text';btn.textContent='Hide';}
+  else{inp.type='password';btn.textContent='Show';}
+}
+function initSettingsPage(){
+  const key=getApiKey();
+  if(key)document.getElementById('api-key-input').value=key;
+}
+function requireKey(featureName){
+  const key=getApiKey();
+  if(!key){
+    showConfirm(
+      'API Key Required',
+      featureName+' needs an Anthropic API key. Go to Settings to add your key — it only takes a minute.',
+      'Go to Settings',
+      ()=>{
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('page-settings').classList.add('active');
+        document.querySelectorAll('.tab-btn')[4].classList.add('active');
+        initSettingsPage();
+      }
+    );
+    return false;
+  }
+  return key;
+}
+function apiHeaders(){return{'Content-Type':'application/json','x-api-key':getApiKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};}
+
+// ─── STATE ───
+let state = loadState();
+function loadState() {
+  try { const s = localStorage.getItem('smartcart-v4'); if (s) return JSON.parse(s); } catch(e) {}
+  return {
+    stores:[{id:'sw',name:'Walmart'},{id:'ss',name:"Sam's Club"},{id:'sd',name:'Dollar Tree'},{id:'sh',name:'Home Depot'},{id:'sa',name:'Amazon'}],
+    lists:{sw:[],ss:[],sd:[],sh:[],sa:[]},
+    customItems:[],receipts:[],recipes:[],
+    budget:{amount:null,month:null},
+    activeStore:'sw',selectedScanStore:null
+  };
+}
+function saveState(){localStorage.setItem('smartcart-v4',JSON.stringify(state));}
+
+// ─── NAV ───
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='budget')renderBudget();
+  if(name==='scan')renderStorePills();
+  if(name==='shop')renderStoreTabs();
+  if(name==='recipe'){closeRecipeDetail();renderRecipeGrid();}
+  if(name==='settings')initSettingsPage();
+}
+
+// ─── SHOPPING ───
+function renderStoreTabs(){
+  const scroll = document.getElementById('stores-scroll');
+  const addBtn = scroll.querySelector('.add-store-tab');
+  const delBtn = document.getElementById('del-store-tab');
+  scroll.querySelectorAll('.store-tab').forEach(t=>t.remove());
+  state.stores.forEach(store=>{
+    const tab = document.createElement('button');
+    tab.className = 'store-tab'+(store.id===state.activeStore?' active':'');
+    tab.textContent = store.name;
+    tab.onclick = ()=>{ state.activeStore=store.id; saveState(); renderStoreTabs(); renderItems(); };
+    scroll.insertBefore(tab, addBtn);
+  });
+  const has = state.stores.length > 0 && state.activeStore;
+  document.getElementById('store-actions-bar').style.display = has ? 'flex' : 'none';
+  document.getElementById('add-item-area').style.display = has ? 'block' : 'none';
+  delBtn.className = 'del-store-tab' + (has ? ' visible' : '');
+  renderItems();
+}
+
+function renderItems(){
+  const list = document.getElementById('items-list');
+  if(!state.activeStore || !state.stores.find(s=>s.id===state.activeStore)){
+    list.innerHTML='<div class="empty-list"><div class="empty-icon">🏪</div>Add a store to get started.</div>';return;
+  }
+  const items = state.lists[state.activeStore]||[];
+  if(items.length===0){list.innerHTML='<div class="empty-list"><div class="empty-icon">✏️</div>No items yet. Add something above!</div>';return;}
+  list.innerHTML='';
+  items.forEach((item,i)=>{
+    const row=document.createElement('div');
+    row.className='item-row'+(item.purchased?' purchased':'');
+    row.innerHTML=`<div class="item-checkbox" onclick="toggleItem(${i})">${item.purchased?'✓':''}</div><div class="item-name">${esc(item.name)}</div>${item.qty>1?`<div class="item-qty">×${item.qty}</div>`:''}<button class="item-del" onclick="removeItem(${i})">×</button>`;
+    list.appendChild(row);
+  });
+}
+
+function toggleItem(i){state.lists[state.activeStore][i].purchased=!state.lists[state.activeStore][i].purchased;saveState();renderItems();}
+function removeItem(i){state.lists[state.activeStore].splice(i,1);saveState();renderItems();}
+function clearPurchased(){if(!state.activeStore)return;state.lists[state.activeStore]=state.lists[state.activeStore].filter(i=>!i.purchased);saveState();renderItems();}
+function toggleAddForm(){const f=document.getElementById('add-item-form');f.classList.toggle('open');if(f.classList.contains('open'))document.getElementById('new-item-name').focus();}
+function addItemToList(){
+  const name=document.getElementById('new-item-name').value.trim();
+  const qty=parseInt(document.getElementById('new-item-qty').value)||1;
+  if(!name||!state.activeStore)return;
+  if(!state.lists[state.activeStore])state.lists[state.activeStore]=[];
+  state.lists[state.activeStore].push({name,qty,purchased:false});
+  const known=[...DEFAULT_ITEMS,...state.customItems].map(x=>x.toLowerCase());
+  if(!known.includes(name.toLowerCase()))state.customItems.push(name);
+  saveState();renderItems();
+  document.getElementById('new-item-name').value='';document.getElementById('new-item-qty').value='1';
+  document.getElementById('add-item-form').classList.remove('open');document.getElementById('suggestions-container').innerHTML='';
+}
+function handleItemSearch(){
+  const q=document.getElementById('item-search').value.trim().toLowerCase();
+  const c=document.getElementById('suggestions-container');
+  if(!q){c.innerHTML='';return;}
+  const matches=[...DEFAULT_ITEMS,...state.customItems].filter(i=>i.toLowerCase().includes(q)).slice(0,8);
+  c.innerHTML=matches.length?`<div class="suggestions-list">${matches.map(m=>`<div class="suggestion-item" onclick="addFromSuggestion('${escA(m)}')">${esc(m)}</div>`).join('')}</div>`:'';
+}
+function addFromSuggestion(name){
+  if(!state.activeStore)return;
+  if(!state.lists[state.activeStore])state.lists[state.activeStore]=[];
+  state.lists[state.activeStore].push({name,qty:1,purchased:false});
+  saveState();renderItems();
+  document.getElementById('item-search').value='';document.getElementById('suggestions-container').innerHTML='';
+}
+function openAddStoreModal(){document.getElementById('new-store-name').value='';openModal('modal-store');setTimeout(()=>document.getElementById('new-store-name').focus(),100);}
+function addStore(){
+  const name=document.getElementById('new-store-name').value.trim();if(!name)return;
+  const id='s'+Date.now();state.stores.push({id,name});state.lists[id]=[];state.activeStore=id;
+  saveState();closeModal('modal-store');renderStoreTabs();
+}
+function confirmDeleteStore(){
+  const store=state.stores.find(s=>s.id===state.activeStore);if(!store)return;
+  showConfirm('Remove Store?','Remove "'+store.name+'" and its entire shopping list? This cannot be undone.','Remove',deleteCurrentStore);
+}
+function deleteCurrentStore(){
+  if(!state.activeStore||state.stores.length===0)return;
+  state.stores=state.stores.filter(s=>s.id!==state.activeStore);
+  delete state.lists[state.activeStore];
+  state.activeStore=state.stores.length>0?state.stores[0].id:null;
+  saveState();renderStoreTabs();
+}
+
+// ─── RECEIPT SCANNER ───
+let scanFile=null,scanAmount=null,scanNote='';
+
+function handleScanFile(e){const f=e.target.files[0];if(f)loadScanImage(f);}
+function handleScanDrop(e){
+  e.preventDefault();document.getElementById('scanner-drop').classList.remove('dragover');
+  const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))loadScanImage(f);
+}
+function loadScanImage(f){
+  scanFile=f;scanAmount=null;
+  const r=new FileReader();r.onload=ev=>{
+    const img=document.getElementById('scan-preview');
+    img.src=ev.target.result;img.style.display='block';
+    document.getElementById('scan-placeholder').style.display='none';
+  };r.readAsDataURL(f);
+  document.getElementById('extract-btn').disabled=false;
+  document.getElementById('result-banner').classList.remove('visible');
+  hideStatus();
+}
+async function extractTotal(){
+  if(!scanFile)return;
+  document.getElementById('extract-btn').disabled=true;
+  showStatus('thinking','Reading receipt with AI…');
+  document.getElementById('result-banner').classList.remove('visible');
+  const _scanKey=requireKey('Receipt scanning');
+  if(!_scanKey){hideStatus();document.getElementById('extract-btn').disabled=false;return;}
+  try{
+    const b64=await toBase64(scanFile);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:scanFile.type||'image/jpeg',data:b64}},{type:'text',text:'Analyze this receipt. Return ONLY JSON, no markdown:\n{"total":24.99,"currency":"USD","note":"Grocery - 8 items","confidence":"high"}\nIf no total, set total to null.'}]}]})});
+    const data=await res.json();const raw=data.content?.find(b=>b.type==='text')?.text||'';const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    hideStatus();document.getElementById('extract-btn').disabled=false;
+    if(parsed.total!=null){scanAmount=parseFloat(parsed.total);scanNote=parsed.note||'';document.getElementById('result-total-val').textContent=fmtMoney(scanAmount);document.getElementById('result-note-val').textContent=scanNote;document.getElementById('result-banner').classList.add('visible');}
+    else showStatus('error',parsed.note||'No total found. Try a clearer photo.');
+  }catch(err){hideStatus();document.getElementById('extract-btn').disabled=false;showStatus('error','Something went wrong.');}
+}
+function renderStorePills(){document.getElementById('store-pills').innerHTML=state.stores.map(s=>`<div class="store-pill ${state.selectedScanStore===s.id?'selected':''}" onclick="selectScanStore('${s.id}')">${esc(s.name)}</div>`).join('');}
+function selectScanStore(id){state.selectedScanStore=state.selectedScanStore===id?null:id;renderStorePills();}
+function saveToLog(){
+  if(scanAmount==null)return;checkBudgetReset();
+  const storeName=state.stores.find(s=>s.id===state.selectedScanStore)?.name||'';
+  state.receipts.unshift({id:Date.now(),amount:scanAmount,note:scanNote,store:storeName,date:fmtDate(),thumb:document.getElementById('scan-preview').src,month:monthKey()});
+  saveState();renderReceiptLog();renderBudget();discardScan();
+}
+function discardScan(){
+  scanFile=null;scanAmount=null;
+  const img=document.getElementById('scan-preview');img.style.display='none';img.src='';
+  document.getElementById('scan-placeholder').style.display='flex';
+  document.getElementById('extract-btn').disabled=true;
+  document.getElementById('scan-file').value='';
+  document.getElementById('result-banner').classList.remove('visible');hideStatus();state.selectedScanStore=null;
+}
+function renderReceiptLog(){const log=document.getElementById('receipt-log');log.innerHTML=state.receipts.length===0?'<div class="empty-list" style="padding:20px">No receipts yet.</div>':state.receipts.map(r=>receiptHTML(r)).join('');}
+function receiptHTML(r){const th=r.thumb?`<img class="receipt-thumb" src="${r.thumb}" alt="">`:`<div class="receipt-thumb-ph">🧾</div>`;const st=r.store?`<div class="receipt-store">${esc(r.store)}</div>`:'';return`<div class="receipt-entry">${th}<div class="receipt-info">${st}<div style="font-size:13px;color:var(--text-sub);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note)}</div><div class="receipt-date">${r.date}</div></div><div class="receipt-amount">${fmtMoney(r.amount)}</div><button class="del-btn" onclick="deleteReceipt(${r.id})">×</button></div>`;}
+function deleteReceipt(id){state.receipts=state.receipts.filter(r=>r.id!==id);saveState();renderReceiptLog();renderBudget();}
+function confirmClearReceipts(){if(state.receipts.length===0)return;showConfirm('Clear All Receipts?','This will remove all receipts from the log.','Clear All',()=>{state.receipts=[];saveState();renderReceiptLog();renderBudget();});}
+function showStatus(type,msg){const b=document.getElementById('status-bar');b.className='status-bar '+type;document.getElementById('status-text').textContent=msg;b.style.display='flex';}
+function hideStatus(){document.getElementById('status-bar').style.display='none';}
+
+// ─── BUDGET ───
+function monthKey(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()}`;}
+function checkBudgetReset(){const k=monthKey();if(state.budget.month!==k){state.budget.month=k;saveState();}}
+function saveBudget(){const v=parseFloat(document.getElementById('budget-input').value);if(isNaN(v)||v<=0)return;checkBudgetReset();state.budget.amount=v;saveState();renderBudget();}
+function renderBudget(){
+  checkBudgetReset();const k=monthKey();const thisMonth=state.receipts.filter(r=>r.month===k);const spent=thisMonth.reduce((s,r)=>s+r.amount,0);const budget=state.budget.amount;const remaining=budget!=null?budget-spent:null;const now=new Date();
+  document.getElementById('budget-month-label').textContent=now.toLocaleDateString('en-US',{month:'long',year:'numeric'}).toUpperCase();
+  if(budget!=null){document.getElementById('budget-remaining').textContent=fmtMoney(Math.max(0,remaining));document.getElementById('budget-sub-label').textContent=remaining<0?`over budget by ${fmtMoney(Math.abs(remaining))}`:'remaining this month';const pct=Math.min(100,(spent/budget)*100);document.getElementById('budget-bar').style.width=pct+'%';document.getElementById('budget-bar').style.background=pct>90?'#ff6b6b':'white';document.getElementById('budget-bar-max').textContent=fmtMoney(budget);document.getElementById('budget-input').value=budget;}
+  else{document.getElementById('budget-remaining').textContent='—';document.getElementById('budget-sub-label').textContent='Set a budget below';document.getElementById('budget-bar').style.width='0%';document.getElementById('budget-bar-max').textContent='—';}
+  document.getElementById('stat-spent').textContent=fmtMoney(spent);document.getElementById('stat-budget').textContent=budget!=null?fmtMoney(budget):'—';
+  const el=document.getElementById('budget-receipt-log');el.innerHTML=thisMonth.length===0?'<div class="empty-list" style="padding:20px">No receipts this month.</div>':thisMonth.map(r=>receiptHTML(r)).join('');
+}
+
+// ─── RECIPES ───
+let recipeFile=null,currentRecipeId=null,recipeEditMode=false;
+
+function handleRecipeFile(e){const f=e.target.files[0];if(f)loadRecipeImage(f);}
+function handleRecipeDrop(e){
+  e.preventDefault();document.getElementById('recipe-scan-zone').classList.remove('dragover');
+  const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))loadRecipeImage(f);
+}
+function loadRecipeImage(f){
+  recipeFile=f;const r=new FileReader();r.onload=ev=>{
+    const img=document.getElementById('recipe-preview');img.src=ev.target.result;img.style.display='block';
+    document.getElementById('recipe-scan-placeholder').style.display='none';
+  };r.readAsDataURL(f);
+  document.getElementById('scan-recipe-btn').disabled=false;showRecipeStatus('','');
+}
+async function scanRecipe(){
+  if(!recipeFile)return;
+  document.getElementById('scan-recipe-btn').disabled=true;showRecipeStatus('thinking','Extracting recipe with AI…');
+  const _rKey=requireKey('Recipe scanning');
+  if(!_rKey){hideRecipeStatus();document.getElementById('scan-recipe-btn').disabled=false;return;}
+  try{
+    const b64=await toBase64(recipeFile);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:recipeFile.type||'image/jpeg',data:b64}},{type:'text',text:'Extract the full recipe from this image. Return ONLY JSON, no markdown:\n{"name":"Recipe Name","servings":4,"ingredients":["1 cup flour","2 eggs"],"instructions":["Step one.","Step two."],"notes":""}\nBe thorough with all ingredients and steps.'}]}]})});
+    const data=await res.json();const raw=data.content?.find(b=>b.type==='text')?.text||'';const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    hideRecipeStatus();document.getElementById('scan-recipe-btn').disabled=false;
+    const recipe={id:Date.now(),name:parsed.name||'Untitled Recipe',servings:parsed.servings||4,ingredients:Array.isArray(parsed.ingredients)?parsed.ingredients:[],instructions:Array.isArray(parsed.instructions)?parsed.instructions:[],notes:parsed.notes||'',image:document.getElementById('recipe-preview').src,date:fmtDate(),calories:null};
+    state.recipes.unshift(recipe);saveState();resetRecipeScan();renderRecipeGrid();openRecipeDetail(recipe.id);
+  }catch(err){hideRecipeStatus();document.getElementById('scan-recipe-btn').disabled=false;showRecipeStatus('error','Could not read recipe. Try a clearer image.');}
+}
+function resetRecipeScan(){
+  recipeFile=null;const img=document.getElementById('recipe-preview');img.style.display='none';img.src='';
+  document.getElementById('recipe-scan-placeholder').style.display='flex';
+  document.getElementById('scan-recipe-btn').disabled=true;
+  document.getElementById('recipe-file').value='';
+}
+function openNewRecipeManual(){
+  const r={id:Date.now(),name:'New Recipe',servings:4,ingredients:[''],instructions:[''],notes:'',image:'',date:fmtDate(),calories:null};
+  state.recipes.unshift(r);saveState();renderRecipeGrid();openRecipeDetail(r.id,true);
+}
+function renderRecipeGrid(){
+  const grid=document.getElementById('recipe-grid');
+  if(!state.recipes||state.recipes.length===0){grid.innerHTML='<div class="empty-list"><div class="empty-icon">🍽️</div>No recipes yet. Scan one above or tap Manual.</div>';return;}
+  grid.innerHTML=state.recipes.map(r=>`<div class="recipe-card" onclick="openRecipeDetail(${r.id})">${r.image?`<img class="recipe-card-img" src="${r.image}" alt="">`:`<div class="recipe-card-img-ph">🍳</div>`}<div class="recipe-card-body"><div class="recipe-card-name">${esc(r.name)}</div><div class="recipe-card-meta">${r.ingredients.filter(x=>x).length} ingredients${r.calories?` · ~${r.calories.totalCals} cal`:''} · ${r.date}</div></div></div>`).join('');
+}
+function openRecipeDetail(id,editNow=false){
+  currentRecipeId=id;recipeEditMode=editNow;
+  document.getElementById('recipe-list-view').style.display='none';
+  document.getElementById('recipe-detail-view').classList.add('open');
+  renderRecipeDetail();
+}
+function closeRecipeDetail(){
+  currentRecipeId=null;recipeEditMode=false;
+  document.getElementById('recipe-list-view').style.display='block';
+  document.getElementById('recipe-detail-view').classList.remove('open');
+  renderRecipeGrid();
+}
+function getRecipe(){return state.recipes.find(r=>r.id===currentRecipeId);}
+
+function renderRecipeDetail(){
+  const r=getRecipe();if(!r)return;
+  document.getElementById('detail-title-display').textContent=r.name;
+  document.getElementById('detail-edit-toggle').textContent=recipeEditMode?'Done':'Edit';
+  document.getElementById('detail-img-wrap').innerHTML=r.image?`<img class="recipe-detail-img" src="${r.image}" alt="">`:`<div class="recipe-detail-img-ph">🍳</div>`;
+  const body=document.getElementById('recipe-detail-body');
+  if(!recipeEditMode){
+    body.innerHTML=`
+      <div><div class="recipe-sec-title">🏷️ Name</div><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700">${esc(r.name)}</div></div>
+      <div><div class="recipe-sec-title">🥕 Ingredients</div><ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px">${r.ingredients.filter(x=>x).map(i=>`<li style="font-size:14px;line-height:1.4">${esc(i)}</li>`).join('')}</ul></div>
+      <div><div class="recipe-sec-title">📋 Instructions</div><ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px">${r.instructions.filter(x=>x).map(s=>`<li style="font-size:14px;line-height:1.5">${esc(s)}</li>`).join('')}</ol></div>
+      ${r.notes?`<div><div class="recipe-sec-title">📝 Notes</div><div style="font-size:14px;line-height:1.6;color:var(--text-sub);background:var(--bg2);padding:12px;border-radius:var(--radius-sm)">${esc(r.notes)}</div></div>`:''}
+      ${buildCalSection(r)}
+    `;
+  }else{
+    const sv=r.servings||4;
+    const ingRows=r.ingredients.map((v,i)=>`<div class="ing-edit-row"><input type="text" value="${escA(v)}" placeholder="e.g. 1 cup flour" oninput="updateIng(${i},this.value)"><button class="item-del" onclick="removeIng(${i})">×</button></div>`).join('');
+    const stepRows=r.instructions.map((v,i)=>`<div class="step-edit-row"><div class="step-num">${i+1}.</div><textarea oninput="updateStep(${i},this.value)">${esc(v)}</textarea><button class="item-del" style="padding-top:10px" onclick="removeStep(${i})">×</button></div>`).join('');
+    body.innerHTML=`
+      <div><div class="recipe-sec-title">🏷️ Name</div><input type="text" style="font-family:'Fraunces',serif;font-size:20px;font-weight:700" value="${escA(r.name)}" oninput="updateName(this.value)"></div>
+      <div><div class="recipe-sec-title">👥 Servings</div><div class="servings-row"><input type="number" min="1" max="99" value="${sv}" style="width:70px;text-align:center" oninput="updateServings(this.value)"><span style="font-size:13px;color:var(--text-sub)">servings</span></div></div>
+      <div><div class="recipe-sec-title">🥕 Ingredients <button class="btn btn-sm" style="background:var(--recipe-light);color:var(--recipe);border:none" onclick="addIng()">＋ Add</button></div><div id="ing-rows">${ingRows}</div><button class="add-line-btn" onclick="addIng()">＋ Add ingredient</button></div>
+      <div><div class="recipe-sec-title">📋 Instructions <button class="btn btn-sm" style="background:var(--recipe-light);color:var(--recipe);border:none" onclick="addStep()">＋ Add</button></div><div id="step-rows">${stepRows}</div><button class="add-line-btn" onclick="addStep()">＋ Add step</button></div>
+      <div><div class="recipe-sec-title">📝 Notes</div><textarea placeholder="Notes, variations, tips…" oninput="updateNotes(this.value)">${esc(r.notes)}</textarea></div>
+    `;
+  }
+}
+
+// ─── CALORIE SECTION ───
+function buildCalSection(r){
+  const sv=r.servings||4;
+  if(r.calories){
+    const perSv=Math.round(r.calories.totalCals/sv);
+    return`<div class="cal-card"><div class="cal-title">🔥 Calorie Estimate</div><div class="cal-grid"><div class="cal-stat"><div class="cal-stat-val">${r.calories.totalCals.toLocaleString()}</div><div class="cal-stat-label">Total Calories</div></div><div class="cal-stat"><div class="cal-stat-val">${perSv.toLocaleString()}</div><div class="cal-stat-label">Per Serving (${sv})</div></div></div><div class="cal-breakdown">${esc(r.calories.breakdown)}</div><div class="cal-note">Estimates based on typical ingredient amounts. Actual values may vary.</div><button class="cal-btn" style="background:rgba(0,0,0,.08);color:#92400e" onclick="recalcCal()">↻ Recalculate</button></div>`;
+  }
+  return`<div class="cal-card"><div class="cal-title">🔥 Calories</div><div style="font-size:13px;color:#92400e;margin-bottom:12px">Calculate estimated calories for this recipe using AI.</div><div class="servings-row"><span style="color:#78350f;font-size:13px">Servings:</span><input type="number" min="1" max="99" value="${sv}" id="cal-sv-input" style="width:70px;text-align:center;background:rgba(255,255,255,.7)" oninput="updateServingsFromCal(this.value)"></div><button class="cal-btn" id="calc-cal-btn" onclick="calculateCalories()">✦ Calculate Calories</button></div>`;
+}
+
+function updateServingsFromCal(v){const r=getRecipe();if(r){r.servings=parseInt(v)||4;saveState();}}
+
+async function calculateCalories(){
+  const r=getRecipe();if(!r)return;
+  const btn=document.getElementById('calc-cal-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="cal-spinner"></span> Calculating…';}
+  const ings=r.ingredients.filter(x=>x.trim());
+  const sv=r.servings||4;
+  const _cKey=requireKey('Calorie calculation');
+  if(!_cKey){if(btn){btn.disabled=false;btn.textContent='✦ Calculate Calories';}return;}
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:`Estimate total calories for this recipe.\n\nRecipe: ${r.name}\nIngredients:\n${ings.map(x=>'- '+x).join('\n')}\n\nReturn ONLY JSON, no markdown:\n{"totalCals":1200,"breakdown":"Flour (2 cups): ~400 cal\\nEggs (2): ~140 cal\\nTotal: ~1200 cal"}\n\ntotalCals = entire recipe total.`}]})});
+    const data=await res.json();const raw=data.content?.find(b=>b.type==='text')?.text||'';const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    r.calories={totalCals:Math.round(parsed.totalCals),breakdown:parsed.breakdown||''};
+    saveState();renderRecipeDetail();renderRecipeGrid();
+  }catch(err){
+    if(btn){btn.disabled=false;btn.textContent='✦ Calculate Calories';}
+    showToast('Could not calculate calories.','#e76f51');
+  }
+}
+async function recalcCal(){const r=getRecipe();if(!r)return;r.calories=null;saveState();renderRecipeDetail();await calculateCalories();}
+
+function toggleRecipeEdit(){recipeEditMode=!recipeEditMode;renderRecipeDetail();}
+function updateName(v){const r=getRecipe();if(r){r.name=v;document.getElementById('detail-title-display').textContent=v;saveState();}}
+function updateServings(v){const r=getRecipe();if(r){r.servings=parseInt(v)||4;saveState();}}
+function updateIng(i,v){const r=getRecipe();if(r){r.ingredients[i]=v;saveState();}}
+function removeIng(i){const r=getRecipe();if(r){r.ingredients.splice(i,1);saveState();renderRecipeDetail();}}
+function addIng(){const r=getRecipe();if(r){r.ingredients.push('');saveState();renderRecipeDetail();setTimeout(()=>{const rows=document.querySelectorAll('.ing-edit-row input');if(rows.length)rows[rows.length-1].focus();},50);}}
+function updateStep(i,v){const r=getRecipe();if(r){r.instructions[i]=v;saveState();}}
+function removeStep(i){const r=getRecipe();if(r){r.instructions.splice(i,1);saveState();renderRecipeDetail();}}
+function addStep(){const r=getRecipe();if(r){r.instructions.push('');saveState();renderRecipeDetail();setTimeout(()=>{const rows=document.querySelectorAll('.step-edit-row textarea');if(rows.length)rows[rows.length-1].focus();},50);}}
+function updateNotes(v){const r=getRecipe();if(r){r.notes=v;saveState();}}
+function confirmDeleteRecipe(){const r=getRecipe();if(!r)return;showConfirm('Delete Recipe?','Delete "'+r.name+'"? This cannot be undone.','Delete',deleteCurrentRecipe);}
+function deleteCurrentRecipe(){state.recipes=state.recipes.filter(x=>x.id!==currentRecipeId);saveState();closeRecipeDetail();}
+
+// ─── INGREDIENT PICKER ───
+let pickerSel={},pickerStore=null;
+function openIngredientPicker(){
+  const r=getRecipe();if(!r)return;
+  pickerSel={};pickerStore=state.stores[0]?.id||null;
+  document.getElementById('picker-store-row').innerHTML=state.stores.map(s=>`<div class="store-pick-pill ${pickerStore===s.id?'on':''}" onclick="setPickerStore('${s.id}',this)">${esc(s.name)}</div>`).join('');
+  const ings=r.ingredients.filter(x=>x.trim());ings.forEach((_,i)=>pickerSel[i]=true);
+  renderPickerIngs(ings);openModal('modal-pick-ing');
+}
+function renderPickerIngs(ings){document.getElementById('ingredient-picker').innerHTML=ings.map((v,i)=>`<div class="picker-row"><div class="picker-check ${pickerSel[i]?'on':''}" onclick="togglePickerItem(${i})">${pickerSel[i]?'✓':''}</div><div class="picker-name">${esc(v)}</div></div>`).join('');}
+function togglePickerItem(i){pickerSel[i]=!pickerSel[i];const r=getRecipe();if(r)renderPickerIngs(r.ingredients.filter(x=>x.trim()));}
+function setPickerStore(id,el){pickerStore=id;document.querySelectorAll('.store-pick-pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');}
+function confirmAddIngredients(){
+  const r=getRecipe();if(!r)return;
+  const ings=r.ingredients.filter(x=>x.trim());const sel=ings.filter((_,i)=>pickerSel[i]);
+  if(!pickerStore||sel.length===0){closeModal('modal-pick-ing');return;}
+  if(!state.lists[pickerStore])state.lists[pickerStore]=[];
+  sel.forEach(v=>state.lists[pickerStore].push({name:v,qty:1,purchased:false}));
+  saveState();closeModal('modal-pick-ing');
+  showToast('✓ '+sel.length+' ingredient'+(sel.length>1?'s':'')+' added to '+(state.stores.find(s=>s.id===pickerStore)?.name||'list'),'var(--recipe)');
+}
+async function extractRecipeFromText(){
+  const txt = document.getElementById('recipe-text-input').value.trim();
+  if(!txt){showToast('Paste some recipe text first.','#e76f51');return;}
+  const btn = document.getElementById('extract-text-btn');
+  btn.disabled=true;btn.textContent='Extracting…';
+  showRecipeStatus('thinking','Reading recipe text…');
+  const _tKey=requireKey('Recipe extraction');
+  if(!_tKey){btn.disabled=false;btn.textContent='✦ Extract Recipe from Text';return;}
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,messages:[{role:'user',content:'Extract the full recipe from the text below. Return ONLY a JSON object, no markdown:\n{"name":"Recipe Name","servings":4,"ingredients":["1 cup flour","2 eggs"],"instructions":["Step one.","Step two."],"notes":""}\nBe thorough — include every ingredient with its quantity and every step in order. Text:\n\n'+txt}]})});
+    const data=await res.json();const raw=data.content?.find(b=>b.type==='text')?.text||'';const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    hideRecipeStatus();btn.disabled=false;btn.textContent='✦ Extract Recipe from Text';
+    const recipe={id:Date.now(),name:parsed.name||'Untitled Recipe',servings:parsed.servings||4,ingredients:Array.isArray(parsed.ingredients)?parsed.ingredients:[],instructions:Array.isArray(parsed.instructions)?parsed.instructions:[],notes:parsed.notes||'',image:'',date:fmtDate(),calories:null};
+    state.recipes.unshift(recipe);saveState();
+    document.getElementById('recipe-text-input').value='';
+    document.getElementById('paste-body').classList.remove('open');
+    document.getElementById('paste-chevron').style.transform='';
+    renderRecipeGrid();openRecipeDetail(recipe.id);
+  }catch(err){
+    hideRecipeStatus();btn.disabled=false;btn.textContent='✦ Extract Recipe from Text';
+    showRecipeStatus('error','Could not extract recipe. Check the text and try again.');
+  }
+}
+function togglePasteBox(){
+  const body=document.getElementById('paste-body');
+  const chev=document.getElementById('paste-chevron');
+  const open=body.classList.toggle('open');
+  chev.style.transform=open?'rotate(180deg)':'';
+  if(open)setTimeout(()=>document.getElementById('recipe-text-input').focus(),50);
+}
+function showRecipeStatus(type,msg){const b=document.getElementById('recipe-status-bar');if(!type){b.style.display='none';return;}b.className='recipe-status-bar '+type;document.getElementById('recipe-status-text').textContent=msg;b.style.display='flex';}
+function hideRecipeStatus(){document.getElementById('recipe-status-bar').style.display='none';}
+
+// ─── HELPERS ───
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej();r.readAsDataURL(file);});}
+function fmtMoney(n){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escA(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtDate(){return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function showToast(msg,bg){const d=document.createElement('div');d.style.cssText=`position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:${bg};color:white;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;z-index:999;white-space:nowrap;pointer-events:none`;d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),2800);}
+
+document.getElementById('new-store-name').addEventListener('keydown',e=>{if(e.key==='Enter')addStore();});
+document.getElementById('new-item-name').addEventListener('keydown',e=>{if(e.key==='Enter')addItemToList();});
+
+renderStoreTabs();renderReceiptLog();renderBudget();renderRecipeGrid();
+</script>
+</body>
+</html>
